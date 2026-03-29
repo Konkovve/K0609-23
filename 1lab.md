@@ -1,5 +1,4 @@
-#**1 Лабораторная работа:**
-# Лабораторная 1 — что там внутри Linux
+# 1 Лабораторная:
 1.
 Для начала были просмотрены namespace-ы текущего процесса. После выполнения команды был получен список неймспейсов, связанных с текущим процессом. Каждый из них отвечает за какойто аспект изоляции (PID, сеть, файловая система и т.д.). ТУт понимаем, что в линуксе процессы могут работать в разных пространствах. Также команда: "lsns" - показала список всех неймспейсов в системе. Видно, что у разных процессов свои неймспейсы, то есть они уже изолированы друг от друга.
 <img width="1103" height="1009" alt="image" src="https://github.com/user-attachments/assets/b799d9ac-0d41-4ebc-b2cd-056d4bbe685c" />
@@ -40,3 +39,67 @@
 Видны только те папки, которые я сам создал. /home, /etc и т.д. - их нет.
 <img width="1197" height="963" alt="image" src="https://github.com/user-attachments/assets/114ea78e-2b8d-4eb4-baff-08396bae4e92" />
 <img width="1162" height="312" alt="image" src="https://github.com/user-attachments/assets/ab41ab18-580f-43c3-8694-a45c35f01dc7" />
+
+
+# 2 Лабораторная:
+
+https://hub.docker.com/r/konkovvv/flask-demo
+
+1. Первый Dockerfile
+Создал простое приложение и Dockerfile, потом собрал образ: "docker build -t myapp:bad ."
+Он получился очень большим (около 1 ГБ), потому что использовался полный образ Python и копировалось всё подряд.
+Запустил: "docker run -d -p 5000:5000 --name app-bad myapp:bad, curl localhost:5000". Приложение работает.
+<img width="1280" height="631" alt="image" src="https://github.com/user-attachments/assets/69477c00-71a0-4d9a-a203-d8da0f6f5cf1" />
+
+2. Улучшение образа
+Сделал более правильный Dockerfile: использовал python:3.12-slim, добавил .dockerignore, убрал лишние файлы.
+Собрал: "docker build -t myapp:good .". Размер стал намного меньше.
+<img width="862" height="198" alt="image" src="https://github.com/user-attachments/assets/3bff05fd-e372-42d6-9799-a04972877b78" />
+
+3. Ограничение ресурсов
+Запустил контейнер с лимитами: "docker run -d -p 5001:5000 --name app-good --memory="128m" --cpus="0.5" myapp:good".
+Проверил: "docker stats app-good". Видно, что контейнер не превышает заданные лимиты.
+<img width="963" height="140" alt="image" src="https://github.com/user-attachments/assets/30418644-77c4-47cb-8b1a-458c311d48a9" />
+
+4. СЛои
+Посмотрел структуру образа: "docker history myapp:good"
+Видно, из каких слоёв он состоит (база, зависимости, приложение).
+<img width="1175" height="492" alt="image" src="https://github.com/user-attachments/assets/a14e5e8e-716f-43ba-8064-c63a72a0c07e" />
+<img width="1175" height="492" alt="image" src="https://github.com/user-attachments/assets/4beae478-af78-41f7-8c3d-e0ba31a1a1d7" />
+
+5. Публикация
+Загрузил образ в Docker Hub: "docker tag myapp:good <username>/flask-demo:v1.0, docker push <username>/flask-demo:v1.0"
+
+
+Контрольный вопрос: Почему образ такой большой?
+
+Образ получился большим, потому что используется базовый образ python:3.12, который сам по себе тяжёлый, и в него копируется весь проект целиком. Также при pip install остаётся кэш и лишние файлы, что дополнительно увеличивает размер. 
+
+
+# 3 Лабораторная:
+
+1. Сеть
+Создал сеть: "docker network create app-network". Запустил контейнеры и проверил связь: "ping db" - контейнеры видят друг друга по имени.
+<img width="863" height="889" alt="image" src="https://github.com/user-attachments/assets/2ac4e25a-c6e7-42ce-a26a-51ef60dc1693" />
+
+2. Volume
+Создал volume и запустил PostgreSQL: "docker volume create pgdata". Создал таблицу, потом удалил контейнер и запустил заново.
+Данные сохранились — значит volume работает.
+<img width="1039" height="353" alt="image" src="https://github.com/user-attachments/assets/195ce11b-68da-406f-8991-44e6e301a10c" />
+
+3. Docker Compose
+Создал docker-compose.yml с тремя сервисами: db(postgre), backend (flask), frontend (nginx).
+Запустил: "docker compose up -d --build".
+Проверил: "docker compose ps". Все сервисы работают.
+<img width="1280" height="126" alt="image" src="https://github.com/user-attachments/assets/7946669a-a89e-4505-aeb3-0d3996af6e46" />
+
+4. Проверка работы
+Создал данные: "docker compose exec db ...".
+Проверил API: "curl localhost:8080/api/items". Ответ пришёл — значит связка frontend -> backend -> db работает.
+
+5. Масштабирование
+Увеличил количество backend: "docker compose up -d --scale backend=3".
+Проверил: "docker compose ps". Появилось 3 контейнера backend.
+<img width="1280" height="166" alt="image" src="https://github.com/user-attachments/assets/766f4ef1-bab2-44e2-8c7c-d889b4a5df0a" />
+
+Проблем с лабой вроде не было, я уже забыл на момент коммита отчёта.
